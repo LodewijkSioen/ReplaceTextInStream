@@ -27,6 +27,7 @@ public class UsingPipes : IStreamingReplacer
     private async Task ReadIntoStream(PipeWriter writer, Stream input, string oldValue, string newValue, CancellationToken cancellationToken)
     {
         var inputBuffer = ArrayPool<char>.Shared.Rent(Math.Max(_bufferLength, oldValue.Length * 2));
+        var newValueInBytes = Encoding.UTF8.GetBytes(newValue);
         var delimiters = new[]
         {
             char.ToLowerInvariant(oldValue[0]),
@@ -49,7 +50,7 @@ public class UsingPipes : IStreamingReplacer
                     if (FindCandidate(out var before, sequence, oldValue, delimiters, out var position))
                     {
                         Encoding.UTF8.GetBytes(before, writer);
-                        Encoding.UTF8.GetBytes(newValue, writer);
+                        await writer.WriteAsync(newValueInBytes, cancellationToken);
 
                         sequence = sequence.Slice(position);
                     }
