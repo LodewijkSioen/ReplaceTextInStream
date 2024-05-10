@@ -28,7 +28,7 @@ public class Program
             context.Response.Body = originalStream;
         });
 
-        var text = File.ReadAllText(Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location), "LoremIpsum.txt"));
+        var text = File.ReadAllText(Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location)!, "LoremIpsum.txt"));
 
         app.MapGet("/", () => Results.Redirect("/pipes"));
         app.MapGet("/pipes", () => Results.Ok(text));
