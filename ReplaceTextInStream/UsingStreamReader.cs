@@ -2,7 +2,7 @@ using System.Buffers;
 
 namespace ReplaceTextInStream;
 
-public class UsingStreamReader : IStreamingReplacer
+public class UsingStreamReader : UsingStreaming
 {
     private readonly int _bufferLength;
     
@@ -11,7 +11,7 @@ public class UsingStreamReader : IStreamingReplacer
         _bufferLength = bufferLength;
     }
 
-    public async Task Replace(Stream input, Stream output, string oldValue, string newValue, CancellationToken cancellationToken = default)
+    public override async Task Replace(Stream input, Stream output, string oldValue, string newValue, CancellationToken cancellationToken = default)
     {
         var inputBuffer = ArrayPool<char>.Shared.Rent(Math.Max(_bufferLength, oldValue.Length * 2));
         var delimiters = new[]
@@ -68,61 +68,5 @@ public class UsingStreamReader : IStreamingReplacer
         {
             ArrayPool<char>.Shared.Return(inputBuffer, true);
         }
-    }
-
-    private bool FindCandidate(out ReadOnlySequence<char> before, 
-        ReadOnlySequence<char> haystack, 
-        string oldValue,
-        char[] delimiters,
-        out SequencePosition position)
-    {
-        var reader = new SequenceReader<char>(haystack);
-
-        while (true)
-        {
-            if (reader.TryReadToAny(out ReadOnlySequence<char> _, delimiters, advancePastDelimiter: false))
-            {
-                if (reader.Remaining < oldValue.Length)
-                {
-                    position = reader.Position;
-                    before = haystack.Slice(0, reader.Position);
-                    return false;
-                }
-
-                var positionOfDelimiter = reader.Position;
-                if (CompareSequence(ref reader, oldValue))
-                {
-                    position = reader.Position;
-                    before = haystack.Slice(0, positionOfDelimiter);
-                    return true;
-                }
-            }
-            else
-            {
-                reader.AdvanceToEnd();
-                position = reader.Position;
-                before = haystack;
-                return false;
-            }
-        }
-    }
-
-    private bool CompareSequence(ref SequenceReader<char> reader, string oldValue)
-    {
-        foreach (var character in oldValue)
-        {
-            if (reader.TryRead(out var candidate) == false
-                || Compare(candidate, character) == false)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    protected  bool Compare(char candidate, char original)
-    {
-        return char.ToUpperInvariant(original) == char.ToUpperInvariant(candidate);
     }
 }
