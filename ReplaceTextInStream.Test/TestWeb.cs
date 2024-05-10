@@ -6,12 +6,15 @@ namespace ReplaceTextInStream.Test;
 [TestFixture]
 public class TestWeb
 {
-    [Test]
-    public async Task Pipes()
+    [TestCase("/pipes")]
+    [TestCase("/regex")]
+    [TestCase("/stream")]
+    [TestCase("/string")]
+    public async Task Pipes(string url)
     {
         var response = await _host.Scenario(s =>
         {
-            s.Get.Url("/pipes");
+            s.Get.Url(url);
             s.StatusCodeShouldBeOk();
         });
 
