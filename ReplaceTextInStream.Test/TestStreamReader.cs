@@ -4,7 +4,7 @@ namespace ReplaceTextInStream.Test;
 public class TestStreamReader : BaseTests
 {
     //Smallest possible buffer size is 16
-    protected override IStreamingReplacer GetReplacer() => new UsingStreamReader(16);
+    protected override IStreamingReplacer GetReplacer() => new UsingStreamReader(bufferLength: 16);
 
     [TestCase("", "", TestName = "Empty")]
     [TestCase("abc", "123", TestName = "Just the text")]

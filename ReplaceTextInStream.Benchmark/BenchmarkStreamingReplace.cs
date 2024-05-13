@@ -37,13 +37,13 @@ public class BenchmarkStreamingReplace
     }
 
     [Benchmark, BenchmarkCategory("Ignore")]
-    public async Task StringReplaceCaseInsensitive()
+    public async Task StringReplaceInvariant()
     {
         await using var input = OpenInputStream();
         await using var output = OpenOutputStream();
-        await new UsingStringReplaceCaseInsensitive().Replace(input, output, "lorem", "schmorem");
+        await new UsingStringReplaceInvariant().Replace(input, output, "lorem", "schmorem");
     }
-
+    
     private Stream OpenInputStream()
     {
         return File.OpenRead("LoremIpsum.txt");
