@@ -2,23 +2,24 @@ using System.Buffers;
 
 namespace ReplaceTextInStream;
 
-public class UsingStreamReader : UsingStreaming
+public class UsingStreamReader : IStreamingReplacer
 {
     private readonly int _bufferLength;
-    
+
     public UsingStreamReader(int bufferLength = 1024)
     {
         _bufferLength = bufferLength;
     }
 
-    public override async Task Replace(Stream input, Stream output, string oldValue, string newValue, CancellationToken cancellationToken = default)
+    public async Task Replace(Stream input, Stream output, string oldValue, string newValue,
+        CancellationToken cancellationToken = default)
     {
-        var inputBuffer = ArrayPool<char>.Shared.Rent(Math.Max(_bufferLength, oldValue.Length * 2));
         var delimiters = new[]
         {
-            char.ToLowerInvariant(oldValue[0]),
-            char.ToUpperInvariant(oldValue[0])
+            char.ToUpperInvariant(oldValue[0]),
+            char.ToLowerInvariant(oldValue[0])
         };
+        var inputBuffer = ArrayPool<char>.Shared.Rent(Math.Max(_bufferLength, oldValue.Length * 2));
 
         try
         {
@@ -68,5 +69,61 @@ public class UsingStreamReader : UsingStreaming
         {
             ArrayPool<char>.Shared.Return(inputBuffer, true);
         }
+    }
+
+    private bool FindCandidate(out ReadOnlySequence<char> before,
+        ReadOnlySequence<char> haystack,
+        string oldValue,
+        char[] delimiters,
+        out SequencePosition position)
+    {
+        var reader = new SequenceReader<char>(haystack);
+
+        while (true)
+        {
+            if (reader.TryReadToAny(out ReadOnlySequence<char> _, delimiters, advancePastDelimiter: false))
+            {
+                if (reader.Remaining < oldValue.Length)
+                {
+                    position = reader.Position;
+                    before = haystack.Slice(0, reader.Position);
+                    return false;
+                }
+
+                var positionOfDelimiter = reader.Position;
+                if (CompareSequence(ref reader, oldValue))
+                {
+                    position = reader.Position;
+                    before = haystack.Slice(0, positionOfDelimiter);
+                    return true;
+                }
+            }
+            else
+            {
+                reader.AdvanceToEnd();
+                position = reader.Position;
+                before = haystack;
+                return false;
+            }
+        }
+    }
+
+    private bool CompareSequence(ref SequenceReader<char> reader, string oldValue)
+    {
+        foreach (var character in oldValue)
+        {
+            if (reader.TryRead(out var candidate) == false
+                || Compare(candidate, character) == false)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool Compare(char candidate, char original)
+    {
+        return char.ToUpperInvariant(original) == char.ToUpperInvariant(candidate);
     }
 }

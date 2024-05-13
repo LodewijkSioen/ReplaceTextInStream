@@ -21,19 +21,19 @@ public class BenchmarkStreamingReplace
     }
 
     [Benchmark]
-    public async Task RegexReplace()
-    {
-        await using var input = OpenInputStream();
-        await using var output = OpenOutputStream();
-        await new UsingRegexReplace().Replace(input, output, "lorem", "schmorem");
-    }
-
-    [Benchmark, BenchmarkCategory("Ignore")]
     public async Task StringReplace()
     {
         await using var input = OpenInputStream();
         await using var output = OpenOutputStream();
         await new UsingStringReplace().Replace(input, output, "lorem", "schmorem");
+    }
+
+    [Benchmark, BenchmarkCategory("Ignore")]
+    public async Task RegexReplace()
+    {
+        await using var input = OpenInputStream();
+        await using var output = OpenOutputStream();
+        await new UsingRegexReplace().Replace(input, output, "lorem", "schmorem");
     }
 
     [Benchmark, BenchmarkCategory("Ignore")]

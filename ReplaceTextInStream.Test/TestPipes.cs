@@ -1,12 +1,10 @@
-using Microsoft.AspNetCore.Http;
-
 namespace ReplaceTextInStream.Test;
 
 [TestFixture]
 public class TestPipes : BaseTests
 {
     //Smallest possible buffer size is 16
-    protected override IStreamingReplacer GetReplacer() => new UsingPipes(16);
+    protected override IStreamingReplacer GetReplacer() => new UsingPipes();
 
     [TestCase("", "", TestName = "Empty")]
     [TestCase("abc", "123", TestName = "Just the text")]
