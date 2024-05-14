@@ -119,8 +119,6 @@ public class UsingPipes(Encoding? encoding = null)
         {
             if (reader.TryAdvanceToAny(pattern.Delimiters, false))
             {
-                
-
                 if (reader.Remaining < pattern.LengthInBytes)
                 {
                     inspected = haystack.Slice(0, reader.Position);
@@ -128,15 +126,13 @@ public class UsingPipes(Encoding? encoding = null)
                     return false;
                 }
 
+                var positionOfCandidate = reader.Position;
                 if (CompareSequence(ref reader, pattern))
                 {
-                    inspected = haystack.Slice(0, reader.Position);
-                    reader.Advance(pattern.LengthInBytes);
+                    inspected = haystack.Slice(0, positionOfCandidate);
                     haystack = haystack.Slice(reader.Position);
                     return true;
                 }
-
-                reader.Advance(pattern.LengthInBytes);
             }
             else
             {
@@ -148,13 +144,27 @@ public class UsingPipes(Encoding? encoding = null)
         }
     }
 
-    
+    /// <summary>
+    /// Compares the next bytes in the reader to the Pattern
+    /// </summary>
+    /// <param name="reader">
+    /// The reader containing the bytes to compare.
+    /// Passed by reference because this function will advance the position of the reader to:
+    ///  - The last byte of the matching pattern
+    ///  - The first byte that doesn't match the pattern
+    /// </param>
+    /// <param name="pattern">The pattern to check against</param>
+    /// <returns>True if the pattern matches, otherwise false</returns>
     private bool CompareSequence(ref SequenceReader<byte> reader, Pattern pattern)
     {
+        //We already know that the first byte matches
+        reader.Advance(1);
+
+        //Check the rest of the bytes
         for (var i = 1; i < pattern.LengthInBytes; i++)
         {
-            if (!reader.TryPeek(i, out var v)
-                || (v != pattern.UpperBytes[i] && v != pattern.LowerBytes[i]))
+            if (!reader.IsNext(pattern.UpperBytes[i], true) 
+                && !reader.IsNext(pattern.LowerBytes[i], true))
             {
                 return false;
             }

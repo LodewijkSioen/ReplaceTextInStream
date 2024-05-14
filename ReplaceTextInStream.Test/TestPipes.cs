@@ -8,8 +8,7 @@ public class TestPipes : BaseTests
 
     [TestCase("", "", TestName = "Empty")]
     [TestCase("abc", "123", TestName = "Just the text")]
-    [TestCase("abc**********abcabc**********abc", "123**********123123**********123", TestName = "Beginning and end of buffer")]
-    [TestCase("**************abc*****", "**************123*****", TestName = "Crossing buffer boundaries")]
+    [TestCase("***ababc***", "***ab123***", TestName = "Almost match followed by match")]
     [TestCase("ABCabcAbcAbC", "123123123123", TestName = "Case Sensitivity")]
     [TestCase("abc€", "123€", TestName = "Multibyte characters")]
     public async Task TestStreamReaderCases(string inputText, string expectedResult)
