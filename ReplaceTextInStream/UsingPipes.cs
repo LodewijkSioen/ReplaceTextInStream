@@ -63,34 +63,55 @@ public class UsingPipes(Encoding? encoding = null)
 
             while (true)
             {
-                //Find the pattern in the sequence. The sequence is byref and will
-                //be resliced
-                if (FindPattern(ref sequence, pattern, out var before))
+                if (FindPattern(ref sequence, pattern, out var inspected))
                 {
-                    await output.WriteAsync(before.ToArray(), cancellationToken);
+                    //If the pattern is found, write the inspected slice and the replacement newvalue
+                    await output.WriteAsync(inspected.ToArray(), cancellationToken);
                     await output.WriteAsync(newValueInBytes, cancellationToken);
                 }
                 else
                 {
-                    await output.WriteAsync(before.ToArray(), cancellationToken);
-                    await output.WriteAsync(sequence.ToArray(), cancellationToken);
+                    //If the pattern is not found, just write the inspected part and exit
+                    await output.WriteAsync(inspected.ToArray(), cancellationToken);
                     break;
                 }
             }
 
+            // Signal to the pipereader what part we have consumed
             reader.AdvanceTo(sequence.Start, sequence.End);
 
             if (result.IsCompleted)
             {
+                // Write the remaining bytes to the output
+                if (!sequence.IsEmpty)
+                {
+                    await output.WriteAsync(sequence.ToArray(), cancellationToken);
+                }
                 break;
             }
         }
-
         
         await reader.CompleteAsync();
     }
 
-    private bool FindPattern(ref ReadOnlySequence<byte> haystack, Pattern pattern, out ReadOnlySequence<byte> before)
+    /// <summary>
+    /// Finds the first occurence of the Pattern in a sequence of bytes
+    /// </summary>
+    /// <param name="haystack">
+    /// The sequence of bytes that might contain the pattern. Passed by reference and will be resliced to
+    /// only contain the part of the sequence that has not been inspected. If the pattern is found, the
+    /// haystack will be resliced at the end of the pattern.
+    /// </param>
+    /// <param name="pattern">The pattern to match in the haystack</param>
+    /// <param name="inspected">
+    /// The slice of the haystack that has been inpected:
+    ///  - If the pattern is found, this will contain all the bytes up to the pattern
+    ///  - If the the pattern is not found, this will contain all the bytes of the haystack
+    ///  - If the first byte of the pattern is found but there are not enough bytes left in the haystack
+    ///    to match the pattern, this will contain all the bytes up to the first byte of the pattern
+    /// </param>
+    /// <returns>True if the pattern is found in the haystack, otherwise false</returns>
+    private bool FindPattern(ref ReadOnlySequence<byte> haystack, Pattern pattern, out ReadOnlySequence<byte> inspected)
     {
         var reader = new SequenceReader<byte>(haystack);
 
@@ -98,16 +119,18 @@ public class UsingPipes(Encoding? encoding = null)
         {
             if (reader.TryAdvanceToAny(pattern.Delimiters, false))
             {
+                
+
                 if (reader.Remaining < pattern.LengthInBytes)
                 {
-                    before = haystack.Slice(0, reader.Position);
+                    inspected = haystack.Slice(0, reader.Position);
                     haystack = haystack.Slice(reader.Position);
                     return false;
                 }
 
                 if (CompareSequence(ref reader, pattern))
                 {
-                    before = haystack.Slice(0, reader.Position);
+                    inspected = haystack.Slice(0, reader.Position);
                     reader.Advance(pattern.LengthInBytes);
                     haystack = haystack.Slice(reader.Position);
                     return true;
@@ -118,7 +141,8 @@ public class UsingPipes(Encoding? encoding = null)
             else
             {
                 reader.AdvanceToEnd();
-                before = default;
+                inspected = haystack.Slice(0, reader.Position);
+                haystack = haystack.Slice(reader.Position);
                 return false;
             }
         }
