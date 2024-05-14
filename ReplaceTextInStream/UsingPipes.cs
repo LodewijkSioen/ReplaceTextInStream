@@ -63,7 +63,7 @@ public class UsingPipes(Encoding? encoding = null)
 
             while (true)
             {
-                if (FindPattern(ref sequence, pattern, out var inspected))
+                if (pattern.FindPattern(ref sequence, out var inspected))
                 {
                     //If the pattern is found, write the inspected slice and the replacement newvalue
                     await output.WriteAsync(inspected.ToArray(), cancellationToken);
@@ -92,101 +92,5 @@ public class UsingPipes(Encoding? encoding = null)
         }
         
         await reader.CompleteAsync();
-    }
-
-    /// <summary>
-    /// Finds the first occurence of the Pattern in a sequence of bytes
-    /// </summary>
-    /// <param name="haystack">
-    /// The sequence of bytes that might contain the pattern. Passed by reference and will be resliced to
-    /// only contain the part of the sequence that has not been inspected. If the pattern is found, the
-    /// haystack will be resliced at the end of the pattern.
-    /// </param>
-    /// <param name="pattern">The pattern to match in the haystack</param>
-    /// <param name="inspected">
-    /// The slice of the haystack that has been inpected:
-    ///  - If the pattern is found, this will contain all the bytes up to the pattern
-    ///  - If the the pattern is not found, this will contain all the bytes of the haystack
-    ///  - If the first byte of the pattern is found but there are not enough bytes left in the haystack
-    ///    to match the pattern, this will contain all the bytes up to the first byte of the pattern
-    /// </param>
-    /// <returns>True if the pattern is found in the haystack, otherwise false</returns>
-    private bool FindPattern(ref ReadOnlySequence<byte> haystack, Pattern pattern, out ReadOnlySequence<byte> inspected)
-    {
-        var reader = new SequenceReader<byte>(haystack);
-
-        while (true)
-        {
-            if (reader.TryAdvanceToAny(pattern.Delimiters, false))
-            {
-                if (reader.Remaining < pattern.LengthInBytes)
-                {
-                    inspected = haystack.Slice(0, reader.Position);
-                    haystack = haystack.Slice(reader.Position);
-                    return false;
-                }
-
-                var positionOfCandidate = reader.Position;
-                if (CompareSequence(ref reader, pattern))
-                {
-                    inspected = haystack.Slice(0, positionOfCandidate);
-                    haystack = haystack.Slice(reader.Position);
-                    return true;
-                }
-            }
-            else
-            {
-                reader.AdvanceToEnd();
-                inspected = haystack.Slice(0, reader.Position);
-                haystack = haystack.Slice(reader.Position);
-                return false;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Compares the next bytes in the reader to the Pattern
-    /// </summary>
-    /// <param name="reader">
-    /// The reader containing the bytes to compare.
-    /// Passed by reference because this function will advance the position of the reader to:
-    ///  - The last byte of the matching pattern
-    ///  - The first byte that doesn't match the pattern
-    /// </param>
-    /// <param name="pattern">The pattern to check against</param>
-    /// <returns>True if the pattern matches, otherwise false</returns>
-    private bool CompareSequence(ref SequenceReader<byte> reader, Pattern pattern)
-    {
-        //We already know that the first byte matches
-        reader.Advance(1);
-        
-        //Check the rest of the bytes
-        for (var i = 1; i < pattern.LengthInBytes; i++)
-        {
-            if (!reader.IsNext(pattern.UpperBytes[i], true) 
-                && !reader.IsNext(pattern.LowerBytes[i], true))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-    
-    private readonly record struct Pattern
-    {
-        public Pattern(Encoding encoding, string value)
-        {
-            UpperBytes = encoding.GetBytes(value.ToUpperInvariant());
-            LowerBytes = encoding.GetBytes(value.ToLowerInvariant());
-            Delimiters = [LowerBytes[0], UpperBytes[0]];
-        }
-
-        public byte[] UpperBytes { get; }
-        public byte[] LowerBytes { get; }
-        public byte[] Delimiters { get; }
-        //This is an assumption: the length in bytes will always be the same if the characters are lowercase or uppercase
-        //Unicode does not specify this, but dotnet does not implement the edge cases where it is used.
-        public int LengthInBytes => UpperBytes.Length;
     }
 }
