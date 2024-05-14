@@ -110,10 +110,14 @@ public class UsingStreamReader : IStreamingReplacer
 
     private bool CompareSequence(ref SequenceReader<char> reader, string oldValue)
     {
-        foreach (var character in oldValue)
+        //Already checked the first character
+        reader.Advance(1);
+        
+        //Otherwise loop over the characters
+        for (var i = 1; i < oldValue.Length; i++)
         {
             if (reader.TryRead(out var candidate) == false
-                || Compare(candidate, character) == false)
+                || Compare(candidate, oldValue[i]) == false)
             {
                 return false;
             }
