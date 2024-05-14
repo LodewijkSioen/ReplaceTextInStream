@@ -159,7 +159,7 @@ public class UsingPipes(Encoding? encoding = null)
     {
         //We already know that the first byte matches
         reader.Advance(1);
-
+        
         //Check the rest of the bytes
         for (var i = 1; i < pattern.LengthInBytes; i++)
         {

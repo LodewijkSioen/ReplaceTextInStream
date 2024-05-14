@@ -29,6 +29,14 @@ public class BenchmarkStreamingReplace
     }
 
     [Benchmark]
+    public async Task RawByteStream()
+    {
+        await using var input = OpenInputStream();
+        await using var output = OpenOutputStream();
+        await new UsingRawByteStream().Replace(input, output, "lorem", "schmorem");
+    }
+
+    [Benchmark]
     public async Task Pipes()
     {
         await using var input = OpenInputStream();

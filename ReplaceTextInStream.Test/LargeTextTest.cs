@@ -33,6 +33,22 @@ public class LargeTextTest
     }
 
     [Test]
+    public async Task RawByteStream()
+    {
+        var replacer = new UsingRawByteStream();
+
+        await using var output = new MemoryStream();
+
+        await replacer.Replace(_input, output, "lorem", "12345");
+
+        output.Position = 0;
+        var reader = new StreamReader(output);
+        var result = await reader.ReadToEndAsync();
+        Assert.That(result, Is.Not.Empty);
+        Assert.That(result, Does.Not.Contain("Lorem").IgnoreCase);
+    }
+
+    [Test]
     public async Task Pipes()
     {
         var replacer = new UsingPipes();

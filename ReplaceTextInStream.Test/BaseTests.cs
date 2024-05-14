@@ -23,8 +23,6 @@ Galaxys can be very nice, you know.";
         await AssertOutputStream(output, Expected);
     }
 
-    
-
     [Test]
     public async Task TestShorterNewValue()
     {
