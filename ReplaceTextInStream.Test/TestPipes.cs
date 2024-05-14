@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace ReplaceTextInStream.Test;
 
 [TestFixture]
@@ -20,5 +22,31 @@ public class TestPipes : BaseTests
         await replacer.Replace(input, output, "abc", "123");
 
         await AssertOutputStream(output, expectedResult);
+    }
+
+    [Test]
+    public async Task NonDefaultEncoding()
+    {
+        var replacer = new UsingPipes(Encoding.Latin1);
+
+        await using var input = CreateInputStream("this is a test with another encoding", Encoding.Latin1);
+        await using var output = new MemoryStream();
+
+        await replacer.Replace(input, output, "test", "whatever");
+
+        await AssertOutputStream(output, "this is a whatever with another encoding", Encoding.Latin1);
+    }
+
+    [Test]
+    public async Task MismatchingEncodings()
+    {
+        var replacer = new UsingPipes(Encoding.UTF32);
+
+        await using var input = CreateInputStream("this is a test with another encoding", Encoding.Latin1);
+        await using var output = new MemoryStream();
+
+        await replacer.Replace(input, output, "test", "whatever");
+
+        await AssertOutputStream(output, "this is a test with another encoding", Encoding.Latin1);
     }
 }

@@ -49,15 +49,15 @@ Galaxys can be very nice, you know.";
         await AssertOutputStream(output, "***1234***");
     }
     
-    protected Stream CreateInputStream(string input)
+    protected Stream CreateInputStream(string input, Encoding? encoding = null)
     {
-        return new MemoryStream(Encoding.UTF8.GetBytes(input));
+        return new MemoryStream((encoding ?? Encoding.Default).GetBytes(input));
     }
 
-    protected async Task AssertOutputStream(Stream output, string expected)
+    protected async Task AssertOutputStream(Stream output, string expected, Encoding? encoding = null)
     {
         output.Position = 0;
-        var reader = new StreamReader(output);
+        var reader = new StreamReader(output, encoding ?? Encoding.Default);
         var result = await reader.ReadToEndAsync();
         Assert.That(result, Is.EqualTo(expected));
     }
