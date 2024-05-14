@@ -5,7 +5,6 @@ namespace ReplaceTextInStream.Test;
 [TestFixture]
 public class TestPipes : BaseTests
 {
-    //Smallest possible buffer size is 16
     protected override IStreamingReplacer GetReplacer() => new UsingPipes();
 
     [TestCase("", "", TestName = "Empty")]

@@ -3,21 +3,35 @@ using System.Text;
 
 namespace ReplaceTextInStream;
 
+public readonly record struct CharByteMap
+{
+    public CharByteMap(Encoding encoding, char c)
+    {
+        Upper = encoding.GetBytes(new[]{char.ToUpperInvariant(c)});
+        Lower = encoding.GetBytes(new[]{char.ToLowerInvariant(c)});
+    }
+
+    public byte[] Upper { get; }
+    public byte[] Lower { get; }
+
+    public bool IsNext(ref SequenceReader<byte> reader, bool advancePast)
+    {
+        return reader.IsNext(Upper, advancePast) || reader.IsNext(Lower, advancePast);
+    }
+}
+
 public readonly record struct Pattern
 {
     public Pattern(Encoding encoding, string value)
     {
-        UpperBytes = encoding.GetBytes(value.ToUpperInvariant());
-        LowerBytes = encoding.GetBytes(value.ToLowerInvariant());
-        Delimiters = [LowerBytes[0], UpperBytes[0]];
+        Bytes = value.Select(c => new CharByteMap(encoding, c)).ToArray();
+        Delimiters = [Bytes[0].Lower[0], Bytes[0].Upper[0]];
+        MaxLength = Bytes.Aggregate(0, (acc, cur) => acc + Math.Max(cur.Lower.Length, cur.Upper.Length));
     }
 
-    private byte[] UpperBytes { get; }
-    private byte[] LowerBytes { get; }
+    private CharByteMap[] Bytes { get; }
     private byte[] Delimiters { get; }
-    //This is an assumption: the length in bytes will always be the same if the characters are lowercase or uppercase
-    //This assumption is actually incorrect, but the characters where this is the case are unlikely for out usecase
-    public int MaxLength => UpperBytes.Length;
+    public int MaxLength { get; }
 
     /// <summary>
     /// Finds the first occurence of the Pattern in a sequence of bytes
@@ -41,7 +55,7 @@ public readonly record struct Pattern
 
         while (true)
         {
-            if (reader.TryAdvanceToAny(Delimiters, false))
+            if (TryAdvanceToPossibleSequence(ref reader))
             {
                 if (reader.Remaining < MaxLength)
                 {
@@ -68,6 +82,20 @@ public readonly record struct Pattern
         }
     }
 
+    private bool TryAdvanceToPossibleSequence(ref SequenceReader<byte> reader)
+    {
+        while (!reader.End 
+               && reader.TryAdvanceToAny(Delimiters, false))
+        {
+            if (Bytes[0].IsNext(ref reader, false))
+            {
+                return true;
+            }
+            reader.Advance(1);
+        }
+        return false;
+    }
+
     /// <summary>
     /// Compares the next bytes in the reader to the Pattern
     /// </summary>
@@ -80,14 +108,9 @@ public readonly record struct Pattern
     /// <returns>True if the pattern matches, otherwise false</returns>
     private bool CompareSequence(ref SequenceReader<byte> reader)
     {
-        //We already know that the first byte matches
-        reader.Advance(1);
-
-        //Check the rest of the bytes
-        for (var i = 1; i < MaxLength; i++)
+        foreach (var b in Bytes)
         {
-            if (!reader.IsNext(UpperBytes[i], true)
-                && !reader.IsNext(LowerBytes[i], true))
+            if (!b.IsNext(ref reader, true))
             {
                 return false;
             }
