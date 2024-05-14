@@ -1,6 +1,4 @@
 using System.Buffers;
-using System.Globalization;
-using System.IO.Pipelines;
 using System.Text;
 
 namespace ReplaceTextInStream.Test;
@@ -44,5 +42,34 @@ public class Experiments
         decoder.Convert(sequence.Slice(4), writer, false, out var charsUsed2, out var completed2);
 
         Assert.That(writer, Is.Not.Null);
+    }
+
+    [Test, Explicit]
+    public void AllCharsHaveSameNumberOfBytesForCasing()
+    {
+        var results = new List<string>();
+
+        for (int i = char.MinValue; i <= char.MaxValue; i++)
+        {
+            char c = (char)i;
+            if (char.IsControl(c)) continue;
+
+            var type = char.IsUpper(c) ? "upper" : char.IsLower(c) ? "lower" : "other";
+
+            var lowerByteCount = Encoding.UTF8.GetByteCount([char.ToLower(c)]);
+            var upperByteCount = Encoding.UTF8.GetByteCount([char.ToUpper(c)]);
+            var lowerInvariantByteCount = Encoding.UTF8.GetByteCount([char.ToLowerInvariant(c)]);
+            var upperInvariantByteCount = Encoding.UTF8.GetByteCount([char.ToUpperInvariant(c)]);
+
+            if (lowerByteCount != upperByteCount)
+            {
+                results.Add($"Mismatch for {c} ({type}): {lowerByteCount} != {upperByteCount}");
+            }
+            if (lowerInvariantByteCount != upperInvariantByteCount)
+            {
+                results.Add($"Mismatch for {c} ({type} invariant): {lowerInvariantByteCount} != {upperInvariantByteCount}");
+            }
+        }
+        Assert.That(results, Is.Empty);
     }
 }
