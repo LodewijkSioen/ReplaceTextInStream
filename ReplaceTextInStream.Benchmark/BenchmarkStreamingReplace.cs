@@ -4,6 +4,22 @@ namespace ReplaceTextInStream.Benchmark;
 
 public class BenchmarkStreamingReplace
 {
+    [Benchmark(Baseline = true)]
+    public async Task StringReplace()
+    {
+        await using var input = OpenInputStream();
+        await using var output = OpenOutputStream();
+        await new UsingStringReplace().Replace(input, output, "lorem", "schmorem");
+    }
+
+    [Benchmark]
+    public async Task RegexReplace()
+    {
+        await using var input = OpenInputStream();
+        await using var output = OpenOutputStream();
+        await new UsingRegexReplace().Replace(input, output, "lorem", "schmorem");
+    }
+
     [Benchmark]
     public async Task StreamReader()
     {
@@ -12,28 +28,12 @@ public class BenchmarkStreamingReplace
         await new UsingStreamReader().Replace(input, output, "lorem", "schmorem");
     }
 
-    [Benchmark(Baseline = true)]
+    [Benchmark]
     public async Task Pipes()
     {
         await using var input = OpenInputStream();
         await using var output = OpenOutputStream();
         await new UsingPipes().Replace(input, output, "lorem", "schmorem");
-    }
-
-    [Benchmark]
-    public async Task StringReplace()
-    {
-        await using var input = OpenInputStream();
-        await using var output = OpenOutputStream();
-        await new UsingStringReplace().Replace(input, output, "lorem", "schmorem");
-    }
-
-    [Benchmark, BenchmarkCategory("Ignore")]
-    public async Task RegexReplace()
-    {
-        await using var input = OpenInputStream();
-        await using var output = OpenOutputStream();
-        await new UsingRegexReplace().Replace(input, output, "lorem", "schmorem");
     }
 
     [Benchmark, BenchmarkCategory("Ignore")]
