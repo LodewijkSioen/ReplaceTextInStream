@@ -15,7 +15,7 @@ public class UsingRawByteStream : IStreamingReplacer
     public async Task Replace(Stream input, Stream output, string oldValue, string newValue,
         CancellationToken cancellationToken = default)
     {
-        var pattern = new Pattern(Encoding.Default, oldValue);
+        var pattern = new Strategy(Encoding.Default, oldValue);
         var inputBuffer = ArrayPool<byte>.Shared.Rent(Math.Max(_bufferLength, pattern.MaxLength * 2));
         var newValueInBytes = Encoding.Default.GetBytes(newValue);
 

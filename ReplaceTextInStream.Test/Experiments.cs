@@ -67,6 +67,14 @@ public class Experiments
         Assert.That(Encoding.UTF8.GetByteCount([upper]), Is.EqualTo(upperCount));
     }
 
+    [TestCase("ſ", "S", false)] //Wierd that this is false, but okay
+    [TestCase("ȿ", "Ȿ", true)]
+    [TestCase("ⱦ", "Ⱦ", true)]
+    public void EqualityOfThoseWierdos(string lower, string upper, bool expected)
+    {
+        Assert.That(lower.Equals(upper, StringComparison.OrdinalIgnoreCase), Is.EqualTo(expected));
+    }
+
     [Test]
     public void TheTurkishThing()
     {

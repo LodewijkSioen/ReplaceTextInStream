@@ -52,7 +52,7 @@ public class UsingPipes(Encoding? encoding = null)
     private async Task WriteToOutput(PipeReader reader, Stream output, string oldValue, string newValue,
         CancellationToken cancellationToken)
     {
-        var pattern = new Pattern(_encoding, oldValue);
+        var pattern = new Strategy(_encoding, oldValue);
         var newValueInBytes = _encoding.GetBytes(newValue);
         
         while (true)

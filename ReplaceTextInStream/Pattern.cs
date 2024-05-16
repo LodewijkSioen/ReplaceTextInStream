@@ -3,26 +3,28 @@ using System.Text;
 
 namespace ReplaceTextInStream;
 
-public readonly record struct CharByteMap
+public readonly struct CharByteMap(Encoding encoding, char c)
 {
-    public CharByteMap(Encoding encoding, char c)
-    {
-        Upper = encoding.GetBytes(new[]{char.ToUpperInvariant(c)});
-        Lower = encoding.GetBytes(new[]{char.ToLowerInvariant(c)});
-    }
-
-    public byte[] Upper { get; }
-    public byte[] Lower { get; }
+    public byte[] Upper { get; } = encoding.GetBytes(new[]{char.ToUpperInvariant(c)});
+    public byte[] Lower { get; } = encoding.GetBytes(new[]{char.ToLowerInvariant(c)});
 
     public bool IsNext(ref SequenceReader<byte> reader, bool advancePast)
     {
-        return reader.IsNext(Upper, advancePast) || reader.IsNext(Lower, advancePast);
+        return IsNextStrategy(ref reader, Lower, advancePast)
+               || IsNextStrategy(ref reader, Upper, advancePast);
+    }
+
+    private bool IsNextStrategy(ref SequenceReader<byte> reader, byte[] bytes, bool advancePast)
+    {
+        return bytes.Length == 1 
+            ? reader.IsNext(bytes[0], advancePast) // Faster
+            : reader.IsNext(bytes, advancePast);   // Slower
     }
 }
 
-public readonly record struct Pattern
+public class Strategy
 {
-    public Pattern(Encoding encoding, string value)
+    public Strategy(Encoding encoding, string value)
     {
         Bytes = value.Select(c => new CharByteMap(encoding, c)).ToArray();
         Delimiters = [Bytes[0].Lower[0], Bytes[0].Upper[0]];
