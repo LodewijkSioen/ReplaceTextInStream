@@ -47,16 +47,22 @@ Galaxys can be very nice, you know.";
         await AssertOutputStream(output, "***1234***");
     }
 
-    [Test]
-    public async Task TestCharactersWithVariableBytelength()
+    [TestCase("ı-İ", "ı-İ", "123")]
+    [TestCase("İ-ı", "İ-ı", "123")]
+    [TestCase("ⱥ-Ⱥ", "ⱥ-Ⱥ", "123")]
+    [TestCase("ɐ-Ɐ", "ɐ-Ɐ", "123")]
+    [TestCase("***ɐ-Ɐ", "ɐ-Ɐ", "***123")]
+    [TestCase("ɐ-Ɐ***", "ɐ-Ɐ", "123***")]
+    [TestCase("***ɐ-Ɐ***", "ɐ-Ɐ", "***123***")]
+    public async Task TestCharactersWithVariableBytelength(string inputString, string pattern, string expected)
     {
         var replacer = GetReplacer();
-        await using var input = CreateInputStream("***ɐȺɐ***");
+        await using var input = CreateInputStream(inputString);
         await using var output = new MemoryStream();
 
-        await replacer.Replace(input, output, "ɐȺɐ", "123");
+        await replacer.Replace(input, output, pattern, "123");
 
-        await AssertOutputStream(output, "***123***");
+        await AssertOutputStream(output, expected);
     }
 
     protected Stream CreateInputStream(string input, Encoding? encoding = null)

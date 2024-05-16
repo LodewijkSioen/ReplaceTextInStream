@@ -27,18 +27,14 @@ public class UsingRawByteStream : IStreamingReplacer
             {
                 var memory = inputBuffer.AsMemory(startIndex, inputBuffer.Length - startIndex);
                 var charactersRead = await input.ReadAsync(memory, cancellationToken);
-                if (charactersRead == 0)
-                {
-                    await output.WriteAsync(inputBuffer[..startIndex], cancellationToken);
-                    break;
-                }
-
+                
                 var sequence = new ReadOnlySequence<byte>(inputBuffer[..(charactersRead + startIndex)]);
                 var currentSequenceLength = sequence.Length;
+                var endOfStream = inputBuffer.Length - startIndex > charactersRead;
 
                 while (true)
                 {
-                    if (pattern.FindPattern(ref sequence, out var inspected))
+                    if (pattern.FindPattern(ref sequence, out var inspected, endOfStream))
                     {
                         await output.WriteAsync(inspected.ToArray(), cancellationToken);
                         await output.WriteAsync(newValueInBytes, cancellationToken);
@@ -48,6 +44,12 @@ public class UsingRawByteStream : IStreamingReplacer
                         await output.WriteAsync(inspected.ToArray(), cancellationToken);
                         break;
                     }
+                }
+
+                if (charactersRead == 0)
+                {
+                    await output.WriteAsync(inputBuffer[..startIndex], cancellationToken);
+                    break;
                 }
 
                 if (cancellationToken.IsCancellationRequested)

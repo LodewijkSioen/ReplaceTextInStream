@@ -48,8 +48,9 @@ public readonly record struct Pattern
     ///  - If the first byte of the pattern is found but there are not enough bytes left in the haystack
     ///    to match the pattern, this will contain all the bytes up to the first byte of the pattern
     /// </param>
+    /// <param name="isFinalRun">Indicates that there are no more bytes to get after this sequence</param>
     /// <returns>True if the pattern is found in the haystack, otherwise false</returns>
-    public bool FindPattern(ref ReadOnlySequence<byte> haystack, out ReadOnlySequence<byte> inspected)
+    public bool FindPattern(ref ReadOnlySequence<byte> haystack, out ReadOnlySequence<byte> inspected, bool isFinalRun)
     {
         var reader = new SequenceReader<byte>(haystack);
 
@@ -57,7 +58,7 @@ public readonly record struct Pattern
         {
             if (TryAdvanceToPossibleSequence(ref reader))
             {
-                if (reader.Remaining < MaxLength)
+                if (!isFinalRun && reader.Remaining < MaxLength)
                 {
                     inspected = haystack.Slice(0, reader.Position);
                     haystack = haystack.Slice(reader.Position);
@@ -82,15 +83,26 @@ public readonly record struct Pattern
         }
     }
 
+    /// <summary>
+    /// Advances the reader to the first byte of this pattern.
+    /// </summary>
+    /// <param name="reader">
+    /// The sequence of bytes containing the bytes to find the pattern.
+    /// If the pattern is found, the reader will be at the first byte.
+    /// </param>
+    /// <returns>True if the byte sequence of the first character is found, otherwise false</returns>
     private bool TryAdvanceToPossibleSequence(ref SequenceReader<byte> reader)
     {
-        while (!reader.End 
-               && reader.TryAdvanceToAny(Delimiters, false))
+        //Find the first byte of this pattern
+        while (reader.TryAdvanceToAny(Delimiters, false))
         {
+            //Is this first byte part of the bytes that make up the first character?
             if (Bytes[0].IsNext(ref reader, false))
             {
                 return true;
             }
+
+            //If not, skip this byte and search further
             reader.Advance(1);
         }
         return false;

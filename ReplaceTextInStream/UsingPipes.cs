@@ -63,7 +63,7 @@ public class UsingPipes(Encoding? encoding = null)
 
             while (true)
             {
-                if (pattern.FindPattern(ref sequence, out var inspected))
+                if (pattern.FindPattern(ref sequence, out var inspected, result.IsCompleted))
                 {
                     //If the pattern is found, write the inspected slice and the replacement newvalue
                     await output.WriteAsync(inspected.ToArray(), cancellationToken);
