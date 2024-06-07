@@ -11,13 +11,14 @@ public class UsingPipes(Encoding? encoding = null)
 
     public Task Replace(Stream input, Stream output, string oldValue, string newValue,
         CancellationToken cancellationToken = default)
-    {
+    {        
         var pipe = new Pipe();
-
+        //begin-snippet: PipeUsage
         var reading = FillPipeAsync(input, pipe.Writer, cancellationToken);
         var writing = WriteToOutput(pipe.Reader, output, oldValue, newValue, cancellationToken);
 
         return Task.WhenAll(reading, writing);
+        //end-snippet
     }
 
     async Task FillPipeAsync(Stream input, PipeWriter writer, CancellationToken cancellationToken)

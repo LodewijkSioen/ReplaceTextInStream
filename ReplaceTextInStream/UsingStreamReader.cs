@@ -35,7 +35,7 @@ public class UsingStreamReader : IStreamingReplacer
                 
                 while (sequence.Length >= oldValue.Length)
                 {
-                    if(FindCandidate(out var before, sequence, oldValue, delimiters, out var position))
+                    if (FindCandidate(out var before, sequence, oldValue, delimiters, out var position))
                     {
                         await writer.WriteAsync(before.ToArray(), cancellationToken);
 

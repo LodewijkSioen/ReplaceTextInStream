@@ -51,6 +51,7 @@ public class Experiments
         //So the decoder remembers the bytes that are not used for the next run
     }
 
+    //begin-snippet: VariableLengthEncoding
     [TestCase('ſ', 'S', 2, 1, TestName = "Some characters have an ascii uppercase variant")]
     [TestCase('ȿ', 'Ȿ', 2, 3, TestName = "Some characters have more bytes in uppercase")]
     [TestCase('ⱦ', 'Ⱦ', 3, 2, TestName = "Some characters have more bytes in lowercase")]
@@ -66,6 +67,7 @@ public class Experiments
         Assert.That(Encoding.UTF8.GetByteCount([lower]), Is.EqualTo(lowerCount));
         Assert.That(Encoding.UTF8.GetByteCount([upper]), Is.EqualTo(upperCount));
     }
+    //end-snippet
 
     [TestCase("ſ", "S", false)] //Wierd that this is false, but okay
     [TestCase("ȿ", "Ȿ", true)]
@@ -97,6 +99,32 @@ public class Experiments
     }
 
     
+    [Test]
+    public void OrdinalVsInvariantSort()
+    {
+        //begin-snippet: OrdinalVsInvariantSort
+        var chars = new [] {"a", "b", "å", "c"};
+
+        var ordinalSort = chars.Order(StringComparer.Ordinal);
+        Assert.That(ordinalSort, Is.EqualTo(new[]{"a", "b", "c", "å" }));
+
+        var invariantSort = chars.Order(StringComparer.InvariantCulture);
+        Assert.That(invariantSort, Is.EqualTo(new[] { "a", "å", "b", "c" }));
+        //end-snippet
+    }
+
+    [Test]
+    public void OrdinalVsInvariantCompare()
+    {
+        //begin-snippet: OrdinalVsInvariantCompare
+        var separated = new string(['a', '\u030a']); // u030a = ̊  aka COMBINING RING ABOVE
+        var single = new string(['å']);
+
+        Assert.That(separated.Equals(single, StringComparison.Ordinal), Is.False);
+        Assert.That(separated.Equals(single, StringComparison.InvariantCulture), Is.True);
+        //end-snippet
+    }
+
     [Test, Explicit]
     public void CheckingStuff()
     {

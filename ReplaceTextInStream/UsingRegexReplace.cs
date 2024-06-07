@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace ReplaceTextInStream;
@@ -13,6 +12,7 @@ public class UsingRegexReplace : IStreamingReplacer
         using var reader = new StreamReader(input, leaveOpen: true);
         var original = await reader.ReadToEndAsync(cancellationToken);
         var replaced = regex.Replace(original, newValue);
-        await output.WriteAsync(Encoding.UTF8.GetBytes(replaced), cancellationToken);
+        await using var writer = new StreamWriter(output, leaveOpen: true);
+        await writer.WriteAsync(replaced);
     }
 }
