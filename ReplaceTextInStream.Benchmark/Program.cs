@@ -1,13 +1,15 @@
 ﻿using BenchmarkDotNet.Running;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Diagnosers;
 
 #if DEBUG
 
-_ = BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args, new DebugInProcessConfig());
+_ = BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args,
+    new DebugInProcessConfig()
+        .AddDiagnoser(MemoryDiagnoser.Default));
 
 #else
 using ReplaceTextInStream.Benchmark;
-using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Filters;
 
 _ = BenchmarkRunner.Run<BenchmarkStreamingReplace>(

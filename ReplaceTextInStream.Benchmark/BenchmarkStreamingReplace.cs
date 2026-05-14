@@ -43,14 +43,6 @@ public class BenchmarkStreamingReplace
         await using var output = OpenOutputStream();
         await new UsingPipes().Replace(input, output, "lorem", "schmorem");
     }
-
-    [Benchmark, BenchmarkCategory("Ignore")]
-    public async Task StringReplaceInvariant()
-    {
-        await using var input = OpenInputStream();
-        await using var output = OpenOutputStream();
-        await new UsingStringReplaceInvariant().Replace(input, output, "lorem", "schmorem");
-    }
     
     private Stream OpenInputStream()
     {

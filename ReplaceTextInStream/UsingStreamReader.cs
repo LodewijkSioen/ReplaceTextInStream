@@ -50,7 +50,9 @@ public class UsingStreamReader : IStreamingReplacer
                     }
                 }
 
+#pragma warning disable CA2024
                 if (reader.EndOfStream)
+#pragma warning restore CA2024
                 {
                     await writer.WriteAsync(sequence.ToArray(), cancellationToken);
                     break;

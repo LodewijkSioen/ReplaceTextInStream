@@ -5,8 +5,8 @@ namespace ReplaceTextInStream;
 
 public readonly struct CharByteMap(Encoding encoding, char c)
 {
-    public byte[] Upper { get; } = encoding.GetBytes(new[]{char.ToUpperInvariant(c)});
-    public byte[] Lower { get; } = encoding.GetBytes(new[]{char.ToLowerInvariant(c)});
+    public byte[] Upper { get; } = encoding.GetBytes([char.ToUpperInvariant(c)]);
+    public byte[] Lower { get; } = encoding.GetBytes([char.ToLowerInvariant(c)]);
 
     public bool IsNext(ref SequenceReader<byte> reader, bool advancePast)
     {
