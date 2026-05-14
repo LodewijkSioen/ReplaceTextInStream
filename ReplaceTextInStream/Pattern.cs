@@ -7,14 +7,15 @@ public readonly struct CharByteMap(Encoding encoding, char c)
 {
     public byte[] Upper { get; } = encoding.GetBytes([char.ToUpperInvariant(c)]);
     public byte[] Lower { get; } = encoding.GetBytes([char.ToLowerInvariant(c)]);
+    private bool HasDistinctCase { get; } = char.ToLowerInvariant(c) != char.ToUpperInvariant(c);
 
     public bool IsNext(ref SequenceReader<byte> reader, bool advancePast)
     {
         return IsNextStrategy(ref reader, Lower, advancePast)
-               || IsNextStrategy(ref reader, Upper, advancePast);
+               || (HasDistinctCase && IsNextStrategy(ref reader, Upper, advancePast));
     }
 
-    private bool IsNextStrategy(ref SequenceReader<byte> reader, byte[] bytes, bool advancePast)
+    private static bool IsNextStrategy(ref SequenceReader<byte> reader, ReadOnlySpan<byte> bytes, bool advancePast)
     {
         return bytes.Length == 1 
             ? reader.IsNext(bytes[0], advancePast) // Faster
@@ -22,17 +23,17 @@ public readonly struct CharByteMap(Encoding encoding, char c)
     }
 }
 
-public class Strategy
+public sealed class Strategy
 {
     public Strategy(Encoding encoding, string value)
     {
         Bytes = value.Select(c => new CharByteMap(encoding, c)).ToArray();
-        Delimiters = [Bytes[0].Lower[0], Bytes[0].Upper[0]];
         MaxLength = Bytes.Aggregate(0, (acc, cur) => acc + Math.Max(cur.Lower.Length, cur.Upper.Length));
+        Delimiters = SearchValues.Create(Bytes[0].Lower[0], Bytes[0].Upper[0]);
     }
 
     private CharByteMap[] Bytes { get; }
-    private byte[] Delimiters { get; }
+    private SearchValues<byte> Delimiters { get; }
     public int MaxLength { get; }
 
     /// <summary>
@@ -95,17 +96,27 @@ public class Strategy
     /// <returns>True if the byte sequence of the first character is found, otherwise false</returns>
     private bool TryAdvanceToPossibleSequence(ref SequenceReader<byte> reader)
     {
-        //Find the first byte of this pattern
-        while (reader.TryAdvanceToAny(Delimiters, false))
+        while (!reader.End)
         {
-            //Is this first byte part of the bytes that make up the first character?
-            if (Bytes[0].IsNext(ref reader, false))
+            //Use IndexOfAny(SearchValues<byte>) for SIMD-accelerated scanning within each segment
+            var index = reader.UnreadSpan.IndexOfAny(Delimiters);
+            if (index >= 0)
             {
-                return true;
-            }
+                reader.Advance(index);
+                //Is this first byte part of the bytes that make up the first character?
+                if (Bytes[0].IsNext(ref reader, false))
+                {
+                    return true;
+                }
 
-            //If not, skip this byte and search further
-            reader.Advance(1);
+                //If not, skip this byte and search further
+                reader.Advance(1);
+            }
+            else
+            {
+                //Delimiter not found in this segment, skip to the next
+                reader.Advance(reader.UnreadSpan.Length);
+            }
         }
         return false;
     }

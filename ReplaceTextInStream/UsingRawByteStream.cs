@@ -36,12 +36,14 @@ public class UsingRawByteStream : IStreamingReplacer
                 {
                     if (pattern.FindPattern(ref sequence, out var inspected, endOfStream))
                     {
-                        await output.WriteAsync(inspected.ToArray(), cancellationToken);
+                        foreach (var segment in inspected)
+                            await output.WriteAsync(segment, cancellationToken);
                         await output.WriteAsync(newValueInBytes, cancellationToken);
                     }
                     else
                     {
-                        await output.WriteAsync(inspected.ToArray(), cancellationToken);
+                        foreach (var segment in inspected)
+                            await output.WriteAsync(segment, cancellationToken);
                         break;
                     }
                 }
