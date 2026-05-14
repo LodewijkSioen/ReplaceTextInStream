@@ -9,89 +9,59 @@ public class UsingPipes(Encoding? encoding = null)
 {
     private readonly Encoding _encoding = encoding ?? Encoding.Default;
 
-    public Task Replace(Stream input, Stream output, string oldValue, string newValue,
+    public async Task Replace(Stream input, Stream output, string oldValue, string newValue,
         CancellationToken cancellationToken = default)
-    {        
-        var pipe = new Pipe();
-        //begin-snippet: PipeUsage
-        var reading = FillPipeAsync(input, pipe.Writer, cancellationToken);
-        var writing = WriteToOutput(pipe.Reader, output, oldValue, newValue, cancellationToken);
-
-        return Task.WhenAll(reading, writing);
-        //end-snippet
-    }
-
-    async Task FillPipeAsync(Stream input, PipeWriter writer, CancellationToken cancellationToken)
-    {
-        while (true)
-        {
-            //Read some stuff from the input stream
-            var memory = writer.GetMemory();
-            
-            var bytesRead = await input.ReadAsync(memory, cancellationToken);
-            if (bytesRead == 0)
-            {
-                break;
-            }
-
-            // Tell the PipeWriter how much was read from the stream.
-            writer.Advance(bytesRead);
-            
-            // Make the data available to the PipeReader.
-            var result = await writer.FlushAsync(cancellationToken);
-
-            if (result.IsCompleted)
-            {
-                break;
-            }
-        }
-
-        // By completing PipeWriter, tell the PipeReader that there's no more data coming.
-        await writer.CompleteAsync();
-    }
-
-    private async Task WriteToOutput(PipeReader reader, Stream output, string oldValue, string newValue,
-        CancellationToken cancellationToken)
     {
         var pattern = new Strategy(_encoding, oldValue);
         var newValueInBytes = _encoding.GetBytes(newValue);
-        
-        while (true)
-        {
-            //Read some stuff from the pipe
-            var result = await reader.ReadAsync(cancellationToken);
-            var sequence = result.Buffer;
 
+        var reader = PipeReader.Create(input, new(leaveOpen: true));
+        var writer = PipeWriter.Create(output, new(leaveOpen: true));
+
+        try
+        {
             while (true)
             {
-                if (pattern.FindPattern(ref sequence, out var inspected, result.IsCompleted))
+                var result = await reader.ReadAsync(cancellationToken);
+                var sequence = result.Buffer;
+
+                while (true)
                 {
-                    //If the pattern is found, write the inspected slice and the replacement newvalue
-                    await output.WriteAsync(inspected.ToArray(), cancellationToken);
-                    await output.WriteAsync(newValueInBytes, cancellationToken);
+                    if (pattern.FindPattern(ref sequence, out var inspected, result.IsCompleted))
+                    {
+                        // Pattern found: write everything before the match, then the replacement
+                        foreach (var segment in inspected)
+                            writer.Write(segment.Span);
+                        writer.Write(newValueInBytes);
+                    }
+                    else
+                    {
+                        // No more matches: write the remaining bytes and stop
+                        foreach (var segment in inspected)
+                            writer.Write(segment.Span);
+                        break;
+                    }
                 }
-                else
+
+                if (result.IsCompleted)
                 {
-                    //If the pattern is not found, just write the inspected part and exit
-                    await output.WriteAsync(inspected.ToArray(), cancellationToken);
+                    // Safety: write any bytes not consumed by the inner loop, then advance past them
+                    foreach (var segment in sequence)
+                        writer.Write(segment.Span);
+                    reader.AdvanceTo(sequence.End, sequence.End);
                     break;
                 }
+
+                reader.AdvanceTo(sequence.Start, sequence.End);
+                await writer.FlushAsync(cancellationToken);
             }
 
-            // Signal to the pipereader what part we have consumed
-            reader.AdvanceTo(sequence.Start, sequence.End);
-
-            if (result.IsCompleted)
-            {
-                // Write the remaining bytes to the output
-                if (!sequence.IsEmpty)
-                {
-                    await output.WriteAsync(sequence.ToArray(), cancellationToken);
-                }
-                break;
-            }
+            await writer.FlushAsync(cancellationToken);
         }
-        
-        await reader.CompleteAsync();
+        finally
+        {
+            await reader.CompleteAsync();
+            await writer.CompleteAsync();
+        }
     }
 }
