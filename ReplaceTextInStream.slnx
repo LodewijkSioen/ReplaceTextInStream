@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="ReplaceTextInStream.Benchmark/ReplaceTextInStream.Benchmark.csproj" />
+  <Project Path="ReplaceTextInStream.Test/ReplaceTextInStream.Test.csproj" />
+  <Project Path="ReplaceTextInStream.Web/ReplaceTextInStream.Web.csproj" />
+  <Project Path="ReplaceTextInStream/ReplaceTextInStream.csproj" />
+</Solution>
